@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raydium v4 AMM Account Decoder — offline 752B (AmmInfo)</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--fg:#e6edf3;--mut:#8b949e;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--acc:#58a6ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;color:var(--acc)}
+.sub{color:var(--mut);font-size:13px;margin:0 0 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+textarea{width:100%;min-height:88px;background:#0d1117;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px}
+button{background:#1f6feb;border:1px solid #1f6feb;color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer}
+button.ghost{background:transparent;border-color:var(--line);color:var(--fg)}
+button:hover{filter:brightness(1.1)}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid var(--ok)}
+.over{background:rgba(248,81,73,.15);color:var(--bad);border:1px solid var(--bad)}
+.near{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);word-break:break-all}
+th{color:var(--mut);font-weight:600;font-size:12px}
+.mono{font-family:ui-monospace,Menlo,monospace}
+.mut{color:var(--mut);font-size:12px}
+.foot{color:var(--mut);font-size:12px;margin-top:18px}
+a{color:var(--acc)}
+#verdictLine{margin:8px 0}
+.flag-zero{color:var(--warn);font-weight:700}
+.sec{color:var(--acc);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Raydium v4 AMM account decoder <span class="mut">— offline, 752 B AmmInfo</span></h1>
+<p class="sub">Full decoder for the Raydium v4 AMM pool account (<span class="mono">AmmInfo</span>,
+<span class="mono">#[repr(C, packed)]</span>, 752 B) per
+<span class="mono">raydium-amm program/src/state.rs</span>
+(<span class="mono">test_amm_info_layout</span>) and
+<span class="mono">LIQUIDITY_STATE_LAYOUT_V4</span> (raydium-sdk
+<span class="mono">liquidity/layout.ts</span>). Bytes 0–8 are
+<span class="mono">status: u64</span> (native program, no Anchor discriminator).
+100% local: no keys, no RPC, no CDN.</p>
+
+<div class="card">
+<h2 style="margin-top:0">1 · Canonical layout (53 fields, 0–752)</h2>
+<table><thead><tr><th>#</th><th>Field (AmmInfo)</th><th>SDK alias</th><th>Range</th><th>Type</th><th>Note</th></tr></thead><tbody id="layoutBody"></tbody></table>
+<p class="mut">Regions: header 16×u64 (0–128) · Fees 8×u64 (128–192) · StateData 144 B (192–336) ·
+9×pubkey (336–624) · padding1 64 B (624–688, SDK: withdrawQueue+lpVault) ·
+amm_owner (688–720) · tail 4×u64 (720–752). Rule: first field starts at 0, widths match
+type (u64 8 / u128 16 / pubkey 32 / pad64 64), each start == previous end, last end == 752.</p>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">2 · Decode pasted account data (base64, stays in this page)</h2>
+<textarea id="b64" placeholder="paste base64-encoded Raydium AMM account data here (e.g. from getAccountInfo data[0]); nothing is sent anywhere"></textarea>
+<div class="row" style="margin-top:8px">
+<button id="btnValidate" type="button">decode account</button>
+<button id="btnSample752" type="button" class="ghost">fill sample: 752 B</button>
+<button id="btnClear" type="button" class="ghost">clear</button>
+</div>
+<div id="verdictLine"><span class="badge near" id="badge">—</span> <span class="mut mono" id="lenLine"></span></div>
+<p class="mut mono" id="warnLine"></p>
+<table><thead><tr><th>Field</th><th>Range</th><th>Value</th><th>Flags</th></tr></thead><tbody id="fieldBody"><tr><td colspan="4" class="mut">no data yet — paste base64 or fill a sample.</td></tr></tbody></table>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">3 · In-page self-test (runs offline)</h2>
+<div class="row"><button id="btnTest" type="button" class="ghost">run self-test</button><span class="mut mono" id="testOut">—</span></div>
+<div class="mut mono" id="testDetail" style="margin-top:8px"></div>
+</div>
+
+<div class="card">
+<h2 style="margin-top:0">4 · What this proves (scope honesty)</h2>
+<ul class="mut" style="margin:6px 0 0 18px;padding:0;font-size:13px">
+<li><strong>Proves:</strong> full 752-byte AmmInfo decoding at exact on-chain offsets (all u64/u128/pubkey fields + status/state range validation).</li>
+<li><strong>Does not prove:</strong> economic correctness of any specific pool (values depend on the live account); TargetOrders (2208 B) is a different account, out of scope.</li>
+<li><strong>Naming:</strong> primary names are AmmInfo (rust: <span class="mono">coin_vault/pc_vault/amm_owner/…</span>); SDK V4 aliases shown (<span class="mono">baseVault/quoteVault/owner/…</span>). Slots 624–688 are <span class="mono">padding1[8]</span> in rust, <span class="mono">withdrawQueue+lpVault</span> in the SDK — same bytes.</li>
+<li>Fully offline: only external ref is <span class="mono">./offsets.js</span> (same folder). No CDN, no fetch, no RPC.</li>
+</ul>
+</div>
+
+<p class="foot">Raydium v4 AMM <span class="mono">AmmInfo</span> · 752 B = header 128 + fees 64 + statedata 144 + pubkeys 288 + padding1 64 + owner 32 + tail 32 · files: raydium_offsets/index.html + offsets.js · fully offline.</p>
+</div>
+<script src="./offsets.js"></script>
+<script>
+(function () {
+'use strict';
+var R = window.RaydiumOffsets;
+function $(id){ return document.getElementById(id); }
+var NOTES = {
+  status: 'AmmStatus 0-7 (native, NOT anchor discriminator)', nonce: 'PDA nonce',
+  order_num: 'max order count', depth: 'price range %', coin_decimals: 'baseDecimal',
+  pc_decimals: 'quoteDecimal', state: 'AmmState 0-6', reset_flag: 'ResetYes/No',
+  min_size: 'min size', vol_max_cut_ratio: 'vol cut (/10000)', amount_wave: 'amount wave',
+  coin_lot_size: 'baseLotSize', pc_lot_size: 'quoteLotSize',
+  min_price_multiplier: 'min price x', max_price_multiplier: 'max price x',
+  sys_decimal_value: 'systemDecimalValue',
+  min_separate_numerator: 'Fees', min_separate_denominator: 'Fees',
+  trade_fee_numerator: 'Fees', trade_fee_denominator: 'Fees',
+  pnl_numerator: 'Fees', pnl_denominator: 'Fees',
+  swap_fee_numerator: 'Fees', swap_fee_denominator: 'Fees',
+  need_take_pnl_coin: 'StateData', need_take_pnl_pc: 'StateData',
+  total_pnl_pc: 'StateData (deprecated)', total_pnl_coin: 'StateData (deprecated)',
+  pool_open_time: 'StateData', state_padding_0: 'StateData padding',
+  state_padding_1: 'StateData padding', orderbook_to_init_time: 'StateData (deprecated)',
+  swap_coin_in_amount: 'u128', swap_pc_out_amount: 'u128', swap_acc_pc_fee: 'u64 fee acc',
+  swap_pc_in_amount: 'u128', swap_coin_out_amount: 'u128', swap_acc_coin_fee: 'u64 fee acc',
+  coin_vault: 'baseVault', pc_vault: 'quoteVault',
+  coin_vault_mint: 'baseMint', pc_vault_mint: 'quoteMint', lp_mint: 'lpMint',
+  open_orders: 'openOrders', market: 'marketId', market_program: 'marketProgramId',
+  target_orders: 'targetOrders', padding1: 'rust padding1[8] = SDK withdrawQueue+lpVault',
+  amm_owner: 'owner', lp_amount: 'lpReserve', client_order_id: 'client order id',
+  recent_epoch: 'recent epoch', padding2: 'tail padding'
+};
+function renderLayout(){
+  var h = '';
+  R.LAYOUT.forEach(function (f, i) {
+    h += '<tr><td class="mono">' + i + '</td><td class="mono">' + f.name + '</td><td class="mono">' +
+      (f.alias || '') + '</td><td class="mono">' + f.start + '–' + f.end +
+      '</td><td class="mono">' + f.type + '</td><td class="mut">' + (NOTES[f.name] || '') + '</td></tr>';
+  });
+  $('layoutBody').innerHTML = h;
+}
+function setBadge(kind, text){
+  var b = $('badge');
+  b.textContent = text;
+  b.className = 'badge ' + (kind === 'ok' ? 'ok' : (kind === 'bad' ? 'over' : 'near'));
+}
+function fmtVal(f, bytes){
+  if (f.type === 'u64') return String(R.getU64LE(bytes, f.start));
+  if (f.type === 'u128') return String(R.getU128LE(bytes, f.start));
+  if (f.type === 'pubkey') return R.b58encode(R.sliceField(bytes, f));
+  if (f.type === 'pad64') return 'hex ' + R.toHex(R.sliceField(bytes, f)).slice(0, 32) + '…';
+  return '?';
+}
+function doValidate(){
+  var raw = $('b64').value;
+  var bytes;
+  try { bytes = R.decodeBase64ToBytes(raw); }
+  catch (e) { setBadge('bad', 'DECODE ERROR'); $('lenLine').textContent = String((e && e.message) || e); return; }
+  var lv = R.validateLength(bytes.length);
+  var va = R.validateAccount(bytes.slice(0, Math.min(bytes.length, 752)));
+  var ok = (lv.verdict === 'VALID_EXACT' || lv.verdict === 'TRAILING') && va.ok;
+  setBadge(ok ? 'ok' : (lv.verdict === 'SHORT' ? 'bad' : 'near'), ok ? 'VALID' : (va.ok ? lv.verdict : 'INVALID'));
+  $('lenLine').textContent = 'decoded ' + bytes.length + ' bytes — ' + lv.detail +
+    (va.ok ? '' : ' · errors: ' + va.errors.join('; '));
+  $('warnLine').textContent = (va.warnings || []).join(' · ');
+  if (lv.verdict === 'SHORT' || !va.values) {
+    $('fieldBody').innerHTML = '<tr><td colspan="4" class="mut">too short: need 752 bytes, got ' + bytes.length + '.</td></tr>';
+    return;
+  }
+  var h = '';
+  R.LAYOUT.forEach(function (f) {
+    var v = fmtVal(f, bytes);
+    var flag = '<span class="mut">ok</span>';
+    if (f.type === 'pubkey' && R.isZero32(R.sliceField(bytes, f))) flag = '<span class="flag-zero">ZERO PUBKEY</span>';
+    h += '<tr><td class="mono">' + f.name + '</td><td class="mono">' + f.start + '–' + f.end +
+      '</td><td class="mono">' + v + '</td><td>' + flag + '</td></tr>';
+  });
+  $('fieldBody').innerHTML = h;
+}
+function doTest(){
+  var pass = 0, total = 0, det = [];
+  function t(name, cond){ total++; if (cond) pass++; det.push((cond ? 'PASS' : 'FAIL') + ' ' + name); }
+  t('layout ok (53 fields, 0-752)', R.validateLayout(R.LAYOUT).ok);
+  t('TOTAL_SIZE=752', R.TOTAL_SIZE === 752);
+  t('coin_vault 336 / pc_vault 368 / lp_mint 464', (function(){
+    function g(n){ for (var i=0;i<R.LAYOUT.length;i++) if (R.LAYOUT[i].name===n) return R.LAYOUT[i]; }
+    return g('coin_vault').start===336 && g('pc_vault').start===368 && g('lp_mint').start===464;
+  })());
+  t('open_orders 496 / market 528 / market_program 560 / target_orders 592 / owner 688', (function(){
+    function g(n){ for (var i=0;i<R.LAYOUT.length;i++) if (R.LAYOUT[i].name===n) return R.LAYOUT[i]; }
+    return g('open_orders').start===496 && g('market').start===528 && g('market_program').start===560 &&
+      g('target_orders').start===592 && g('amm_owner').start===688;
+  })());
+  t('short 751 -> SHORT', R.validateLength(751).verdict === 'SHORT');
+  t('exact 752 -> VALID_EXACT', R.validateLength(752).verdict === 'VALID_EXACT');
+  t('trailing 753 -> TRAILING', R.validateLength(753).verdict === 'TRAILING');
+  t('fixture decodes (status 1, owner fill 0x2a)', (function(){
+    var fx = R.makeFixture(752);
+    var dec = R.decodeAccount(fx);
+    function g(n){ for (var i=0;i<R.LAYOUT.length;i++) if (R.LAYOUT[i].name===n) return R.LAYOUT[i]; }
+    return dec.u64.status === 1n && R.sliceField(fx, g('amm_owner')).every(function(v){return v===0x2a;});
+  })());
+  t('validateAccount fixture ok', R.validateAccount(R.makeFixture(752)).ok);
+  t('base58 roundtrip (Token program id)', (function(){
+    var id = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+    return R.b58encode(R.b58decode(id)) === id;
+  })());
+  $('testOut').textContent = pass + '/' + total + ' passed.';
+  $('testDetail').innerHTML = det.map(function (d) { return d; }).join('<br>');
+}
+$('btnValidate').onclick = doValidate;
+$('btnSample752').onclick = function(){ $('b64').value = R.bytesToBase64(R.makeFixture(752)); doValidate(); };
+$('btnClear').onclick = function(){ $('b64').value=''; setBadge('near','—'); $('lenLine').textContent=''; $('warnLine').textContent=''; $('fieldBody').innerHTML='<tr><td colspan="4" class="mut">cleared.</td></tr>'; };
+$('btnTest').onclick = doTest;
+renderLayout();
+})();
+</script>
+</body>
+</html>
