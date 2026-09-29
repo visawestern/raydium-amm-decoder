@@ -1,0 +1,7 @@
+# raydium-amm-decoder
+
+> Offline Raydium v4 AMM account decoder (AmmInfo, 752 bytes) — browser and Node, no RPC.
+
+- Site: https://visawestern.github.io/raydium-amm-decoder/
+- Static demo, no backend. Open index.html in a browser.
+- License: see LICENSE. Source: https://github.com/visawestern/raydium-amm-decoder
